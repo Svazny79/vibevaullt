@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VibeVault™ Profile</title>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0f0f;
+  color: white;
+}
+
+.header {
+  padding: 15px;
+  text-align: center;
+  font-size: 24px;
+  background: linear-gradient(90deg, #ff00cc, #3333ff);
+}
+
+.profile {
+  text-align: center;
+  padding: 20px;
+}
+
+.profile img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+}
+
+.username {
+  font-size: 22px;
+  margin-top: 10px;
+}
+
+.realname {
+  color: #aaa;
+}
+
+.bio {
+  margin-top: 10px;
+}
+
+.upload-section {
+  text-align: center;
+  margin: 20px;
+}
+
+input[type="file"] {
+  margin-top: 10px;
+}
+
+.stories {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 20px;
+}
+
+.story {
+  background: #222;
+  padding: 5px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.story img, .story video {
+  width: 100%;
+  border-radius: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">VibeVault™</div>
+
+<div class="profile">
+  <img id="profilePic" src="https://via.placeholder.com/120">
+  <div class="username">@yourusername</div>
+  <div class="realname">Your Real Name</div>
+  <div class="bio">This is your bio. Edit it in the code!</div>
+</div>
+
+<div class="upload-section">
+  <h2>My Stories</h2>
+  <input type="file" id="fileInput" multiple>
+</div>
+
+<div class="stories" id="stories"></div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const stories = document.getElementById('stories');
+
+fileInput.addEventListener('change', function() {
+  const files = fileInput.files;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const url = URL.createObjectURL(file);
+
+    const storyDiv = document.createElement('div');
+    storyDiv.className = 'story';
+
+    if (file.type.startsWith('image')) {
+      const img = document.createElement('img');
+      img.src = url;
+      storyDiv.appendChild(img);
+    } 
+    else if (file.type.startsWith('video')) {
+      const video = document.createElement('video');
+      video.src = url;
+      video.controls = true;
+      storyDiv.appendChild(video);
+    }
+
+    stories.appendChild(storyDiv);
+  }
+});
+</script>
+
+</body>
+</html>
