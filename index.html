@@ -25,36 +25,31 @@ body {
 }
 
 button {
-  padding: 10px;
+  padding: 8px 12px;
   margin: 5px;
-  border: none;
   border-radius: 8px;
+  border: none;
   cursor: pointer;
 }
 
 input {
-  padding: 10px;
+  padding: 8px;
   margin: 5px;
   border-radius: 8px;
   border: none;
 }
 
-.profile img {
-  width: 120px;
-  border-radius: 50%;
-}
-
-.stories {
-  display: grid;
-  grid-template-columns: repeat(auto-fill,120px);
-  gap: 10px;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.story img {
-  width: 100%;
+.userCard {
+  background: #222;
+  padding: 10px;
+  margin: 10px;
   border-radius: 10px;
+}
+
+.stories img {
+  width: 100px;
+  border-radius: 10px;
+  margin: 5px;
 }
 </style>
 </head>
@@ -62,126 +57,191 @@ input {
 <body>
 
 <div class="header">VibeVault™</div>
-
 <div class="container" id="app"></div>
 
 <script>
-let user = JSON.parse(localStorage.getItem("user"));
-let loggedOutMode = false;
+let users = JSON.parse(localStorage.getItem("users")) || [];
+let currentUser = JSON.parse(localStorage.getItem("currentUser"));
+let viewerMode = false;
 
+/* ---------- FAKE USERS ---------- */
+if (users.length === 0) {
+  users = [
+    {
+      username: "mike123",
+      password: "123",
+      private: false,
+      followers: [],
+      following: [],
+      stories: ["https://picsum.photos/200?1"]
+    },
+    {
+      username: "lisa_vibes",
+      password: "123",
+      private: true,
+      followers: [],
+      following: [],
+      stories: ["https://picsum.photos/200?2"]
+    },
+    {
+      username: "pro_gamer",
+      password: "123",
+      private: false,
+      followers: [],
+      following: [],
+      stories: ["https://picsum.photos/200?3"]
+    }
+  ];
+  saveUsers();
+}
+
+/* ---------- START ---------- */
 function renderStart() {
   const app = document.getElementById("app");
 
-  if (!user) {
+  if (!currentUser && !viewerMode) {
     app.innerHTML = `
-      <h2>Create Account</h2>
+      <h2>Welcome to VibeVault™</h2>
+
       <input id="username" placeholder="Username"><br>
       <input id="password" type="password" placeholder="Password"><br>
-      <button onclick="createAccount()">Sign Up</button>
+
+      <button onclick="signup()">Sign Up</button>
+      <button onclick="login()">Login</button>
+
       <br><br>
-      <button onclick="stayLoggedOut()">Stay Logged Out</button>
+      <button onclick="enterViewer()">Stay Logged Out</button>
     `;
   } else {
-    renderProfile();
+    renderFeed();
   }
 }
 
-function createAccount() {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
+/* ---------- AUTH ---------- */
+function signup() {
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
 
-  user = {
-    username,
-    password,
-    stories: [],
+  const newUser = {
+    username: u,
+    password: p,
+    private: false,
     followers: [],
     following: [],
-    private: false
+    stories: []
   };
 
-  localStorage.setItem("user", JSON.stringify(user));
-  renderProfile();
+  users.push(newUser);
+  currentUser = newUser;
+
+  saveUsers();
+  saveCurrentUser();
+
+  renderFeed();
 }
 
-function stayLoggedOut() {
-  loggedOutMode = true;
-  renderProfile();
+function login() {
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
+
+  const found = users.find(x => x.username === u && x.password === p);
+
+  if (found) {
+    currentUser = found;
+    saveCurrentUser();
+    renderFeed();
+  } else {
+    alert("User not found");
+  }
 }
 
-function renderProfile() {
+function enterViewer() {
+  viewerMode = true;
+  renderFeed();
+}
+
+/* ---------- FEED ---------- */
+function renderFeed() {
   const app = document.getElementById("app");
 
-  if (loggedOutMode) {
-    app.innerHTML = `
-      <h2>Viewer Mode 👀</h2>
-      <p>You cannot follow or post</p>
-      <button onclick="location.reload()">Go Back</button>
-    `;
-    return;
+  let html = `<h2>Feed</h2>`;
+
+  if (!viewerMode) {
+    html += `<p>Logged in as @${currentUser.username}</p>
+             <button onclick="logout()">Logout</button>
+             <button onclick="togglePrivacy()">Toggle Privacy</button>
+             <br><input type="file" onchange="uploadStory(event)">`;
+  } else {
+    html += `<p>Viewer Mode 👀</p>
+             <button onclick="location.reload()">Back</button>`;
   }
 
-  app.innerHTML = `
-    <div class="profile">
-      <img src="https://via.placeholder.com/120">
-      <h2>@${user.username}</h2>
-      <p>${user.private ? "🔒 Private Account" : "🌍 Public Account"}</p>
+  users.forEach(u => {
+    html += `
+      <div class="userCard">
+        <h3>@${u.username} ${u.private ? "🔒" : ""}</h3>
+        ${!viewerMode && u.username !== currentUser.username ? 
+          `<button onclick="followUser('${u.username}')">Follow</button>` : ""}
 
-      <button onclick="togglePrivacy()">Toggle Privacy</button>
-      <button onclick="followSelf()">+ Follow (demo)</button>
-    </div>
+        <div class="stories">
+          ${(!u.private || (currentUser && currentUser.following.includes(u.username))) 
+            ? u.stories.map(s => `<img src="${s}">`).join("")
+            : "<p>Private Account</p>"}
+        </div>
+      </div>
+    `;
+  });
 
-    <h3>Upload Story</h3>
-    <input type="file" id="fileInput">
+  app.innerHTML = html;
+}
 
-    <div class="stories" id="stories"></div>
-  `;
+/* ---------- ACTIONS ---------- */
+function followUser(name) {
+  const target = users.find(u => u.username === name);
 
-  document.getElementById("fileInput").addEventListener("change", uploadStory);
+  if (!currentUser.following.includes(name)) {
+    currentUser.following.push(name);
+    target.followers.push(currentUser.username);
 
-  renderStories();
+    saveUsers();
+    saveCurrentUser();
+
+    renderFeed();
+  }
 }
 
 function togglePrivacy() {
-  user.private = !user.private;
-  saveUser();
-  renderProfile();
-}
-
-function followSelf() {
-  user.followers.push("demoUser");
-  saveUser();
-  alert("Someone followed you 😎");
+  currentUser.private = !currentUser.private;
+  saveUsers();
+  saveCurrentUser();
+  renderFeed();
 }
 
 function uploadStory(e) {
   const file = e.target.files[0];
   const url = URL.createObjectURL(file);
 
-  user.stories.push(url);
-  saveUser();
-  renderStories();
+  currentUser.stories.push(url);
+
+  saveUsers();
+  renderFeed();
 }
 
-function renderStories() {
-  const storiesDiv = document.getElementById("stories");
-  storiesDiv.innerHTML = "";
-
-  user.stories.forEach(s => {
-    const div = document.createElement("div");
-    div.className = "story";
-
-    const img = document.createElement("img");
-    img.src = s;
-
-    div.appendChild(img);
-    storiesDiv.appendChild(div);
-  });
+function logout() {
+  localStorage.removeItem("currentUser");
+  location.reload();
 }
 
-function saveUser() {
-  localStorage.setItem("user", JSON.stringify(user));
+/* ---------- STORAGE ---------- */
+function saveUsers() {
+  localStorage.setItem("users", JSON.stringify(users));
 }
 
+function saveCurrentUser() {
+  localStorage.setItem("currentUser", JSON.stringify(currentUser));
+}
+
+/* ---------- INIT ---------- */
 renderStart();
 </script>
 
