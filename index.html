@@ -2,71 +2,57 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>VibeVault™ Profile</title>
+<title>VibeVault™</title>
+
 <style>
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: Arial;
   background: #0f0f0f;
   color: white;
 }
 
 .header {
-  padding: 15px;
   text-align: center;
+  padding: 15px;
   font-size: 24px;
-  background: linear-gradient(90deg, #ff00cc, #3333ff);
+  background: linear-gradient(90deg,#ff00cc,#3333ff);
 }
 
-.profile {
-  text-align: center;
+.container {
   padding: 20px;
+  text-align: center;
+}
+
+button {
+  padding: 10px;
+  margin: 5px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+input {
+  padding: 10px;
+  margin: 5px;
+  border-radius: 8px;
+  border: none;
 }
 
 .profile img {
   width: 120px;
-  height: 120px;
   border-radius: 50%;
-  border: 3px solid #fff;
-}
-
-.username {
-  font-size: 22px;
-  margin-top: 10px;
-}
-
-.realname {
-  color: #aaa;
-}
-
-.bio {
-  margin-top: 10px;
-}
-
-.upload-section {
-  text-align: center;
-  margin: 20px;
-}
-
-input[type="file"] {
-  margin-top: 10px;
 }
 
 .stories {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill,120px);
   gap: 10px;
-  padding: 20px;
+  justify-content: center;
+  margin-top: 20px;
 }
 
-.story {
-  background: #222;
-  padding: 5px;
-  border-radius: 10px;
-  text-align: center;
-}
-
-.story img, .story video {
+.story img {
   width: 100%;
   border-radius: 10px;
 }
@@ -77,49 +63,126 @@ input[type="file"] {
 
 <div class="header">VibeVault™</div>
 
-<div class="profile">
-  <img id="profilePic" src="https://via.placeholder.com/120">
-  <div class="username">@yourusername</div>
-  <div class="realname">Your Real Name</div>
-  <div class="bio">This is your bio. Edit it in the code!</div>
-</div>
-
-<div class="upload-section">
-  <h2>My Stories</h2>
-  <input type="file" id="fileInput" multiple>
-</div>
-
-<div class="stories" id="stories"></div>
+<div class="container" id="app"></div>
 
 <script>
-const fileInput = document.getElementById('fileInput');
-const stories = document.getElementById('stories');
+let user = JSON.parse(localStorage.getItem("user"));
+let loggedOutMode = false;
 
-fileInput.addEventListener('change', function() {
-  const files = fileInput.files;
+function renderStart() {
+  const app = document.getElementById("app");
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const url = URL.createObjectURL(file);
-
-    const storyDiv = document.createElement('div');
-    storyDiv.className = 'story';
-
-    if (file.type.startsWith('image')) {
-      const img = document.createElement('img');
-      img.src = url;
-      storyDiv.appendChild(img);
-    } 
-    else if (file.type.startsWith('video')) {
-      const video = document.createElement('video');
-      video.src = url;
-      video.controls = true;
-      storyDiv.appendChild(video);
-    }
-
-    stories.appendChild(storyDiv);
+  if (!user) {
+    app.innerHTML = `
+      <h2>Create Account</h2>
+      <input id="username" placeholder="Username"><br>
+      <input id="password" type="password" placeholder="Password"><br>
+      <button onclick="createAccount()">Sign Up</button>
+      <br><br>
+      <button onclick="stayLoggedOut()">Stay Logged Out</button>
+    `;
+  } else {
+    renderProfile();
   }
-});
+}
+
+function createAccount() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  user = {
+    username,
+    password,
+    stories: [],
+    followers: [],
+    following: [],
+    private: false
+  };
+
+  localStorage.setItem("user", JSON.stringify(user));
+  renderProfile();
+}
+
+function stayLoggedOut() {
+  loggedOutMode = true;
+  renderProfile();
+}
+
+function renderProfile() {
+  const app = document.getElementById("app");
+
+  if (loggedOutMode) {
+    app.innerHTML = `
+      <h2>Viewer Mode 👀</h2>
+      <p>You cannot follow or post</p>
+      <button onclick="location.reload()">Go Back</button>
+    `;
+    return;
+  }
+
+  app.innerHTML = `
+    <div class="profile">
+      <img src="https://via.placeholder.com/120">
+      <h2>@${user.username}</h2>
+      <p>${user.private ? "🔒 Private Account" : "🌍 Public Account"}</p>
+
+      <button onclick="togglePrivacy()">Toggle Privacy</button>
+      <button onclick="followSelf()">+ Follow (demo)</button>
+    </div>
+
+    <h3>Upload Story</h3>
+    <input type="file" id="fileInput">
+
+    <div class="stories" id="stories"></div>
+  `;
+
+  document.getElementById("fileInput").addEventListener("change", uploadStory);
+
+  renderStories();
+}
+
+function togglePrivacy() {
+  user.private = !user.private;
+  saveUser();
+  renderProfile();
+}
+
+function followSelf() {
+  user.followers.push("demoUser");
+  saveUser();
+  alert("Someone followed you 😎");
+}
+
+function uploadStory(e) {
+  const file = e.target.files[0];
+  const url = URL.createObjectURL(file);
+
+  user.stories.push(url);
+  saveUser();
+  renderStories();
+}
+
+function renderStories() {
+  const storiesDiv = document.getElementById("stories");
+  storiesDiv.innerHTML = "";
+
+  user.stories.forEach(s => {
+    const div = document.createElement("div");
+    div.className = "story";
+
+    const img = document.createElement("img");
+    img.src = s;
+
+    div.appendChild(img);
+    storiesDiv.appendChild(div);
+  });
+}
+
+function saveUser() {
+  localStorage.setItem("user", JSON.stringify(user));
+}
+
+renderStart();
 </script>
 
 </body>
