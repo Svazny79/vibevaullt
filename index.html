@@ -1,86 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>VibeVault™</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: #0f0f0f;
-  color: white;
-}
-
-.header {
-  text-align: center;
-  padding: 15px;
-  font-size: 24px;
-  background: linear-gradient(90deg,#ff00cc,#3333ff);
-}
-
-.container {
-  padding: 20px;
-  text-align: center;
-}
-
-input, textarea {
-  padding: 8px;
-  border-radius: 8px;
-  border: none;
-  margin: 5px;
-}
-
-button {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: none;
-  margin: 5px;
-  cursor: pointer;
-}
-
-.userCard {
-  background: #222;
-  padding: 10px;
-  margin: 10px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.profile img {
-  width: 120px;
-  border-radius: 50%;
-}
-
-.stories img {
-  width: 120px;
-  border-radius: 10px;
-  margin: 5px;
-  cursor: pointer;
-}
-
-.viewer {
-  position: fixed;
-  top:0;left:0;
-  width:100%;
-  height:100%;
-  background:black;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-
-.viewer img {
-  max-width:90%;
-  max-height:90%;
-}
-
-.commentBox {
-  background:#222;
-  margin:5px;
-  padding:5px;
-  border-radius:8px;
-}
+body {margin:0;font-family:Arial;background:#0f0f0f;color:white;}
+.header {text-align:center;padding:15px;font-size:24px;background:linear-gradient(90deg,#ff00cc,#3333ff);}
+.container {padding:20px;text-align:center;}
+input,button {padding:8px;margin:5px;border-radius:8px;border:none;}
+.userCard {background:#222;padding:10px;margin:10px;border-radius:10px;cursor:pointer;}
+.profile img {width:120px;border-radius:50%;}
+.story {width:120px;margin:5px;border-radius:10px;cursor:pointer;}
+.modal {position:fixed;top:0;left:0;width:100%;height:100%;background:black;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 </style>
 </head>
 
@@ -95,238 +27,208 @@ let currentUser = JSON.parse(localStorage.getItem("currentUser"));
 let viewerMode = false;
 
 /* ---------- FAKE USERS ---------- */
-if (users.length === 0) {
-  users = [
-    {username:"mike123",password:"123",bio:"🏀 Basketball | Gym life",private:false,followers:[],following:[],requests:[],fake:true,stories:[],pfp:"https://picsum.photos/100?1"},
-    {username:"lisa_vibes",password:"123",bio:"☕ Aesthetic | Coffee",private:true,followers:[],following:[],requests:[],fake:true,stories:[],pfp:"https://picsum.photos/100?2"},
-    {username:"pro_gamer",password:"123",bio:"🎮 Gaming clips",private:false,followers:[],following:[],requests:[],fake:true,stories:[],pfp:"https://picsum.photos/100?3"}
-  ];
-  saveUsers();
+if(users.length===0){
+users=[
+{username:"mike123",password:"123",bio:"🏀 Basketball life",private:false,followers:[],following:[],requests:[],stories:[],notifications:[],fake:true},
+{username:"lisa_vibes",password:"123",bio:"☕ Coffee & aesthetic",private:true,followers:[],following:[],requests:[],stories:[],notifications:[],fake:true},
+{username:"pro_gamer",password:"123",bio:"🎮 Gaming clips",private:false,followers:[],following:[],requests:[],stories:[],notifications:[],fake:true}
+];
+saveUsers();
 }
 
 /* ---------- START ---------- */
 function renderStart(){
-  if(!currentUser && !viewerMode){
-    app.innerHTML=`
-      <h2>Welcome</h2>
-      <input id="u" placeholder="Username"><br>
-      <input id="p" type="password" placeholder="Password"><br>
-      <button onclick="signup()">Sign Up</button>
-      <button onclick="login()">Login</button><br><br>
-      <button onclick="viewerMode=true;renderSearch()">Stay Logged Out</button>
-    `;
-  } else renderSearch();
+if(!currentUser && !viewerMode){
+app.innerHTML=`
+<h2>Welcome</h2>
+<input id="u" placeholder="Username"><br>
+<input id="p" type="password" placeholder="Password"><br>
+<button onclick="signup()">Sign Up</button>
+<button onclick="login()">Login</button><br>
+<button onclick="viewer()">Stay Logged Out</button>
+`;
+}else renderSearch();
 }
 
 /* ---------- AUTH ---------- */
 function signup(){
-  currentUser={
-    username:u.value,
-    password:p.value,
-    bio:"New user ✨",
-    private:false,
-    followers:[],
-    following:[],
-    requests:[],
-    fake:false,
-    stories:[],
-    pfp:"https://via.placeholder.com/120",
-    notifications:[]
-  };
-  users.push(currentUser);
-  saveUsers(); saveCurrentUser();
-  renderSearch();
+const u=uEl.value,p=pEl.value;
+const newUser={username:u,password:p,bio:"New user ✨",private:false,followers:[],following:[],requests:[],stories:[],notifications:[],fake:false};
+users.push(newUser);
+currentUser=newUser;
+saveAll();
+renderSearch();
 }
-
 function login(){
-  let found=users.find(x=>x.username===u.value&&x.password===p.value);
-  if(found){currentUser=found;saveCurrentUser();renderSearch();}
+const f=users.find(x=>x.username===uEl.value&&x.password===pEl.value);
+if(f){currentUser=f;saveCurrent();renderSearch();}else alert("Not found");
 }
+function viewer(){viewerMode=true;renderSearch();}
 
 /* ---------- SEARCH ---------- */
 function renderSearch(){
-  let sorted=[...users].sort((a,b)=>b.followers.length-a.followers.length);
-
-  app.innerHTML=`
-    <h2>Search</h2>
-    ${!viewerMode?`<button onclick="viewRequests()">Requests (${currentUser.requests.length})</button>
-    <button onclick="viewNotifications()">🔔</button>`:""}
-    <input placeholder="Search..." oninput="searchUser(this.value)">
-    <div id="results"></div>
-  `;
-
-  displayResults(sorted);
+const sorted=[...users].sort((a,b)=>b.followers.length-a.followers.length);
+app.innerHTML=`
+<h2>Search</h2>
+<input placeholder="Search..." oninput="search(this.value)">
+<button onclick="viewNotifications()">🔔</button>
+<div id="results"></div>
+`;
+showUsers(sorted);
 }
-
-function searchUser(q){
-  displayResults(users.filter(u=>u.username.includes(q)));
+function search(q){
+showUsers(users.filter(u=>u.username.includes(q)));
 }
-
-function displayResults(list){
-  results.innerHTML="";
-  list.forEach(u=>{
-    results.innerHTML+=`
-      <div class="userCard" onclick="viewProfile('${u.username}')">
-        <img src="${u.pfp}" width="50">
-        <h3>@${u.username}</h3>
-        <p>${u.bio}</p>
-      </div>
-    `;
-  });
+function showUsers(list){
+results.innerHTML="";
+list.forEach(u=>{
+results.innerHTML+=`
+<div class="userCard" onclick="viewProfile('${u.username}')">
+<h3>@${u.username}</h3>
+<p>${u.bio}</p>
+</div>`;
+});
 }
 
 /* ---------- PROFILE ---------- */
 function viewProfile(name){
-  let u=users.find(x=>x.username===name);
-  let canView=!u.private||(currentUser&&currentUser.following.includes(name));
+const u=users.find(x=>x.username===name);
+let canView=!u.private||(currentUser&&currentUser.following.includes(name));
 
-  let html=`
-    <button onclick="renderSearch()">⬅</button>
-    <div class="profile">
-      <img src="${u.pfp}">
-      <h2>@${u.username}</h2>
-      <p>${u.bio}</p>
-      ${u.private?"🔒":"🌍"}
-    </div>
-  `;
+let html=`
+<button onclick="renderSearch()">⬅</button>
+<div class="profile">
+<img src="${u.pic||'https://via.placeholder.com/120'}">
+<h2>@${u.username}</h2>
+<p>${u.bio}</p>
+<p>${u.private?"🔒 Private":"🌍 Public"}</p>
+</div>
+`;
 
-  if(!viewerMode&&currentUser.username!==name){
-    html+=`<button onclick="followRequest('${name}')">Follow</button>`;
-  }
+if(!viewerMode && currentUser && currentUser.username!==name){
+html+=`<button onclick="follow('${name}')">Follow</button>`;
+}
 
-  if(currentUser.username===name){
-    html+=`
-      <h3>Edit Profile</h3>
-      <input placeholder="New bio" id="newBio">
-      <input type="file" onchange="changePFP(event)">
-      <button onclick="saveBio()">Save</button>
-      <input type="file" onchange="uploadStory(event)">
-    `;
-  }
+if(currentUser && currentUser.username===name){
+html+=`
+<br><button onclick="editProfile()">Edit Profile</button>
+<input type="file" onchange="uploadStory(event)">
+`;
+}
 
-  if(canView){
-    html+=`<h3>Stories</h3><div class="stories">`;
-    getStories(u).forEach((s,i)=>{
-      html+=`<img src="${s.url}" onclick="openViewer('${name}',${i})">`;
-    });
-    html+=`</div>`;
-  } else html+=`<p>Private account</p>`;
+if(canView){
+let stories = u.fake ? generateStories(u) : u.stories;
 
-  app.innerHTML=html;
+html+=`<h3>Stories</h3>`;
+stories.forEach((s,i)=>{
+html+=`<img class="story" src="${s}" onclick="openStory('${name}',${i})">`;
+});
+}else html+=`<p>Private account</p>`;
+
+app.innerHTML=html;
 }
 
 /* ---------- STORIES ---------- */
-function getStories(user){
-  if(user.fake){
-    if(user.stories.length===0){
-      let imgs=["sports","coffee","gaming"];
-      imgs.forEach(i=>{
-        user.stories.push({url:`https://picsum.photos/200?${i}`,likes:0,comments:[]});
-      });
-    }
-  }
-  return user.stories;
-}
-
 function uploadStory(e){
-  let file=e.target.files[0];
-  let url=URL.createObjectURL(file);
-  currentUser.stories.push({url,likes:0,comments:[]});
-  saveUsers();
+const url=URL.createObjectURL(e.target.files[0]);
+currentUser.stories.push({url,likes:[],comments:[]});
+saveAll();
 }
+function openStory(name,i){
+const u=users.find(x=>x.username===name);
+let s=u.fake?{url:generateStories(u)[i],likes:[],comments:[]} : u.stories[i];
 
-/* ---------- VIEWER ---------- */
-function openViewer(name,index){
-  let u=users.find(x=>x.username===name);
-  let story=getStories(u)[index];
-
-  document.body.innerHTML+=`
-    <div class="viewer" onclick="this.remove()">
-      <div>
-        <img src="${story.url}">
-        <p>❤️ ${story.likes}</p>
-        <button onclick="likeStory('${name}',${index})">Like</button>
-        <div>${story.comments.map(c=>`<div class='commentBox'>${c}</div>`).join("")}</div>
-        <input id="cmt" placeholder="Comment">
-        <button onclick="addComment('${name}',${index})">Send</button>
-      </div>
-    </div>
-  `;
+app.innerHTML=`
+<div class="modal">
+<img src="${s.url}" style="max-width:90%">
+<button onclick="likeStory('${name}',${i})">❤️ ${s.likes.length}</button>
+<div>${s.comments.map(c=>`<p>${c}</p>`).join("")}</div>
+<input id="c"><button onclick="comment('${name}',${i})">Send</button>
+<button onclick="viewProfile('${name}')">Close</button>
+</div>
+`;
 }
-
 function likeStory(name,i){
-  let u=users.find(x=>x.username===name);
-  u.stories[i].likes++;
-  saveUsers();
-}
+const u=users.find(x=>x.username===name);
+if(u.fake)return;
 
-function addComment(name,i){
-  let u=users.find(x=>x.username===name);
-  u.stories[i].comments.push(cmt.value);
-  saveUsers();
+let s=u.stories[i];
+if(!s.likes.includes(currentUser.username)){
+s.likes.push(currentUser.username);
+u.notifications.push(currentUser.username+" liked your story");
+}
+saveAll();
+openStory(name,i);
+}
+function comment(name,i){
+const u=users.find(x=>x.username===name);
+if(u.fake)return;
+
+let s=u.stories[i];
+s.comments.push(currentUser.username+": "+c.value);
+u.notifications.push(currentUser.username+" commented");
+saveAll();
+openStory(name,i);
 }
 
 /* ---------- FOLLOW ---------- */
-function followRequest(name){
-  let t=users.find(u=>u.username===name);
+function follow(name){
+const t=users.find(u=>u.username===name);
 
-  if(t.fake){
-    currentUser.following.push(name);
-    t.followers.push(currentUser.username);
-    currentUser.notifications.push(`${name} followed you back`);
-  } else {
-    t.requests.push(currentUser.username);
-  }
-
-  saveUsers(); saveCurrentUser();
+if(t.fake){
+currentUser.following.push(name);
+t.followers.push(currentUser.username);
+}else{
+t.requests.push(currentUser.username);
+t.notifications.push("New follow request");
+alert("Request sent");
+}
+saveAll();
 }
 
-/* ---------- REQUESTS ---------- */
-function viewRequests(){
-  app.innerHTML=`<h2>Requests</h2><button onclick="renderSearch()">⬅</button>`;
-  currentUser.requests.forEach(r=>{
-    app.innerHTML+=`
-      <div>
-        @${r}
-        <button onclick="accept('${r}')">Accept</button>
-      </div>
-    `;
-  });
+/* ---------- EDIT ---------- */
+function editProfile(){
+app.innerHTML=`
+<h2>Edit</h2>
+<input id="bio" placeholder="New bio">
+<input type="file" onchange="uploadPic(event)">
+<button onclick="saveProfile()">Save</button>
+`;
 }
-
-function accept(name){
-  let sender=users.find(u=>u.username===name);
-  currentUser.followers.push(name);
-  sender.following.push(currentUser.username);
-  currentUser.requests=currentUser.requests.filter(x=>x!==name);
-  saveUsers(); renderSearch();
+function uploadPic(e){
+currentUser.pic=URL.createObjectURL(e.target.files[0]);
+}
+function saveProfile(){
+currentUser.bio=bio.value;
+saveAll();
+renderSearch();
 }
 
 /* ---------- NOTIFICATIONS ---------- */
 function viewNotifications(){
-  app.innerHTML=`<h2>Notifications</h2><button onclick="renderSearch()">⬅</button>`;
-  currentUser.notifications.forEach(n=>{
-    app.innerHTML+=`<p>${n}</p>`;
-  });
+let html=`<h2>Notifications</h2><button onclick="renderSearch()">Back</button>`;
+currentUser.notifications.forEach(n=>html+=`<p>${n}</p>`);
+app.innerHTML=html;
 }
 
-/* ---------- EDIT ---------- */
-function saveBio(){
-  currentUser.bio=newBio.value;
-  saveUsers(); renderSearch();
-}
-
-function changePFP(e){
-  let file=e.target.files[0];
-  currentUser.pfp=URL.createObjectURL(file);
-  saveUsers();
+/* ---------- FAKE STORY GEN ---------- */
+function generateStories(u){
+if(u.bio.includes("Basketball")) return ["https://picsum.photos/200?basketball","https://picsum.photos/200?gym"];
+if(u.bio.includes("Coffee")) return ["https://picsum.photos/200?coffee","https://picsum.photos/200?aesthetic"];
+if(u.bio.includes("Gaming")) return ["https://picsum.photos/200?gaming","https://picsum.photos/200?setup"];
+return ["https://picsum.photos/200?random"];
 }
 
 /* ---------- STORAGE ---------- */
 function saveUsers(){localStorage.setItem("users",JSON.stringify(users));}
-function saveCurrentUser(){localStorage.setItem("currentUser",JSON.stringify(currentUser));}
+function saveCurrent(){localStorage.setItem("currentUser",JSON.stringify(currentUser));}
+function saveAll(){saveUsers();saveCurrent();}
 
 /* ---------- INIT ---------- */
+const app=document.getElementById("app");
+const uEl=document.getElementById("u");
+const pEl=document.getElementById("p");
+
 renderStart();
 </script>
 
