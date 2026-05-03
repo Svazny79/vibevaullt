@@ -19,14 +19,16 @@ button,input{padding:8px;margin:5px;border-radius:8px;border:none;}
 <body>
 
 <div class="header">VibeVault™</div>
-<div class="container" id="app"></div>
+<div id="app" class="container"></div>
 
 <script>
+const app = document.getElementById("app");
+
+/* ---------- DATA ---------- */
 let users = JSON.parse(localStorage.getItem("users")) || [];
 let currentUser = JSON.parse(localStorage.getItem("currentUser"));
-let viewerMode = false;
 
-/* ---------- FAKE USERS ---------- */
+/* ---------- INIT FAKE USERS ---------- */
 if(users.length===0){
 users=[
 {username:"mike123",bio:"🏀 Basketball life",followers:[],following:[],requests:[],stories:[],private:false,fake:true},
@@ -54,7 +56,7 @@ saveCurrent();
 renderHome();
 }
 
-/* ---------- HOME (PROFILE LANDING) ---------- */
+/* ---------- HOME ---------- */
 function renderHome(){
 app.innerHTML=`
 <div class="profile">
@@ -64,19 +66,22 @@ app.innerHTML=`
 <p>${currentUser.private?"🔒 Private":"🌍 Public"}</p>
 
 <button onclick="editProfile()">Edit</button>
-<button onclick="togglePrivate()">Toggle Privacy</button>
+<button onclick="togglePrivate()">Privacy</button>
 <button onclick="openSearch()">🔍 Search</button>
-<button onclick="viewRequests()">📩 Requests (${currentUser.requests.length})</button>
+<button onclick="viewRequests()">📩 (${currentUser.requests.length})</button>
+
 <br><br>
 <input type="file" onchange="uploadStory(event)">
 </div>
 
 <h3>Your Stories</h3>
-<div>${currentUser.stories.map((s,i)=>`<img class="story" src="${s.url}" onclick="openStory('${currentUser.username}',${i})">`).join("")}</div>
+<div>
+${currentUser.stories.map((s,i)=>`<img class="story" src="${s.url}" onclick="openStory('${currentUser.username}',${i})">`).join("")}
+</div>
 `;
 }
 
-/* ---------- PROFILE EDIT ---------- */
+/* ---------- EDIT ---------- */
 function editProfile(){
 app.innerHTML=`
 <h2>Edit Profile</h2>
@@ -89,12 +94,16 @@ app.innerHTML=`
 }
 
 function uploadPic(e){
-currentUser.pic=URL.createObjectURL(e.target.files[0]);
+currentUser.pic = URL.createObjectURL(e.target.files[0]);
 }
 
 function saveProfile(){
-currentUser.username=name.value||currentUser.username;
-currentUser.bio=bio.value||currentUser.bio;
+let nameInput = document.getElementById("name").value;
+let bioInput = document.getElementById("bio").value;
+
+if(nameInput) currentUser.username = nameInput;
+if(bioInput) currentUser.bio = bioInput;
+
 saveAll();
 renderHome();
 }
@@ -105,7 +114,7 @@ let sorted=[...users].sort((a,b)=>b.followers.length-a.followers.length);
 
 app.innerHTML=`
 <h2>Search</h2>
-<input placeholder="Search..." oninput="search(this.value)">
+<input placeholder="Search..." oninput="searchUsers(this.value)">
 <button onclick="renderHome()">⬅ Back</button>
 <div id="results"></div>
 `;
@@ -113,12 +122,14 @@ app.innerHTML=`
 displayUsers(sorted);
 }
 
-function search(q){
-displayUsers(users.filter(u=>u.username.includes(q)));
+function searchUsers(q){
+displayUsers(users.filter(u=>u.username.toLowerCase().includes(q.toLowerCase())));
 }
 
 function displayUsers(list){
+let results = document.getElementById("results");
 results.innerHTML="";
+
 list.forEach(u=>{
 results.innerHTML+=`
 <div class="card">
@@ -132,11 +143,11 @@ results.innerHTML+=`
 
 /* ---------- VIEW PROFILE ---------- */
 function viewProfile(name){
-let u=users.find(x=>x.username===name);
-let canView=!u.private || currentUser.following.includes(name);
+let u = users.find(x=>x.username===name);
+let canView = !u.private || currentUser.following.includes(name);
 
 let html=`
-<button onclick="openSearch()">⬅</button>
+<button onclick="openSearch()">⬅ Back</button>
 <div class="profile">
 <img src="${u.pic||'https://via.placeholder.com/120'}">
 <h2>@${u.username}</h2>
@@ -164,7 +175,7 @@ html+=`<p>Private account</p>`;
 app.innerHTML=html;
 }
 
-/* ---------- FOLLOW SYSTEM ---------- */
+/* ---------- FOLLOW ---------- */
 function follow(name){
 let t=users.find(u=>u.username===name);
 
@@ -209,7 +220,10 @@ renderHome();
 
 /* ---------- STORIES ---------- */
 function uploadStory(e){
-let url=URL.createObjectURL(e.target.files[0]);
+let file = e.target.files[0];
+if(!file) return;
+
+let url = URL.createObjectURL(file);
 currentUser.stories.push({url});
 saveAll();
 renderHome();
@@ -217,17 +231,17 @@ renderHome();
 
 function openStory(name,i){
 let u=users.find(x=>x.username===name);
-let s=u.fake ? generateStories(u)[i] : u.stories[i].url;
+let src = u.fake ? generateStories(u)[i] : u.stories[i].url;
 
 app.innerHTML=`
 <div class="modal">
-<img src="${s}" style="max-width:90%">
+<img src="${src}" style="max-width:90%">
 <button onclick="viewProfile('${name}')">Close</button>
 </div>
 `;
 }
 
-/* ---------- SMART FAKE STORIES ---------- */
+/* ---------- FAKE STORIES ---------- */
 function generateStories(u){
 if(u.bio.includes("Basketball")) return ["https://picsum.photos/200?basketball","https://picsum.photos/200?gym"];
 if(u.bio.includes("Coffee")) return ["https://picsum.photos/200?coffee","https://picsum.photos/200?aesthetic"];
@@ -237,7 +251,7 @@ return ["https://picsum.photos/200?random"];
 
 /* ---------- PRIVACY ---------- */
 function togglePrivate(){
-currentUser.private=!currentUser.private;
+currentUser.private = !currentUser.private;
 saveAll();
 renderHome();
 }
@@ -247,8 +261,7 @@ function saveUsers(){localStorage.setItem("users",JSON.stringify(users));}
 function saveCurrent(){localStorage.setItem("currentUser",JSON.stringify(currentUser));}
 function saveAll(){saveUsers();saveCurrent();}
 
-/* ---------- INIT ---------- */
-const app=document.getElementById("app");
+/* ---------- RUN ---------- */
 start();
 </script>
 
